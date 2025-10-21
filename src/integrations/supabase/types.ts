@@ -14,7 +14,65 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      note_media: {
+        Row: {
+          created_at: string
+          id: string
+          media_type: string
+          note_id: string
+          storage_path: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          media_type: string
+          note_id: string
+          storage_path: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          media_type?: string
+          note_id?: string
+          storage_path?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "note_media_note_id_fkey"
+            columns: ["note_id"]
+            isOneToOne: false
+            referencedRelation: "notes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notes: {
+        Row: {
+          content: string | null
+          created_at: string
+          id: string
+          title: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          content?: string | null
+          created_at?: string
+          id?: string
+          title?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          content?: string | null
+          created_at?: string
+          id?: string
+          title?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
