@@ -2,9 +2,10 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Plus, LogOut, StickyNote } from "lucide-react";
+import { Plus, LogOut, StickyNote, Download } from "lucide-react";
 import NoteCard from "@/components/NoteCard";
 import NoteEditor from "@/components/NoteEditor";
+import ExportDialog from "@/components/ExportDialog";
 import { toast } from "sonner";
 
 interface Note {
@@ -27,6 +28,7 @@ const Index = () => {
   const [media, setMedia] = useState<MediaItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [editorOpen, setEditorOpen] = useState(false);
+  const [exportOpen, setExportOpen] = useState(false);
   const [selectedNoteId, setSelectedNoteId] = useState<string | undefined>();
 
   useEffect(() => {
@@ -120,6 +122,10 @@ const Index = () => {
               <Plus className="h-5 w-5" />
               New Note
             </Button>
+            <Button variant="outline" onClick={() => setExportOpen(true)} size="lg" className="gap-2">
+              <Download className="h-5 w-5" />
+              Export
+            </Button>
             <Button variant="outline" onClick={handleLogout} size="lg">
               <LogOut className="h-5 w-5" />
             </Button>
@@ -160,6 +166,13 @@ const Index = () => {
         open={editorOpen}
         onClose={() => setEditorOpen(false)}
         onSave={loadNotes}
+      />
+
+      <ExportDialog
+        open={exportOpen}
+        onClose={() => setExportOpen(false)}
+        notes={notes}
+        media={media}
       />
     </div>
   );
