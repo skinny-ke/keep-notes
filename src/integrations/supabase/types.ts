@@ -46,6 +46,41 @@ export type Database = {
           },
         ]
       }
+      note_versions: {
+        Row: {
+          content: string | null
+          created_at: string
+          id: string
+          note_id: string
+          title: string | null
+          version_number: number
+        }
+        Insert: {
+          content?: string | null
+          created_at?: string
+          id?: string
+          note_id: string
+          title?: string | null
+          version_number: number
+        }
+        Update: {
+          content?: string | null
+          created_at?: string
+          id?: string
+          note_id?: string
+          title?: string | null
+          version_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "note_versions_note_id_fkey"
+            columns: ["note_id"]
+            isOneToOne: false
+            referencedRelation: "notes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notes: {
         Row: {
           content: string | null

@@ -2,11 +2,14 @@ import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Image as ImageIcon, Music, Video, Upload, X, Loader2 } from "lucide-react";
+import { Image as ImageIcon, Music, Video, X, Loader2, History } from "lucide-react";
+import RichTextEditor from "./RichTextEditor";
+import DrawingCanvas from "./DrawingCanvas";
+import VersionHistory from "./VersionHistory";
 
 interface MediaItem {
   id: string;
@@ -27,6 +30,7 @@ const NoteEditor = ({ noteId, open, onClose, onSave }: NoteEditorProps) => {
   const [media, setMedia] = useState<MediaItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [versionHistoryOpen, setVersionHistoryOpen] = useState(false);
 
   useEffect(() => {
     if (noteId && open) {
@@ -73,6 +77,35 @@ const NoteEditor = ({ noteId, open, onClose, onSave }: NoteEditorProps) => {
       if (!user) throw new Error("Not authenticated");
 
       if (noteId) {
+        // Save current version to history before updating
+        const { data: currentNote } = await supabase
+          .from('notes')
+          .select('title, content')
+          .eq('id', noteId)
+          .single();
+
+        if (currentNote) {
+          // Get the latest version number
+          const { data: latestVersion } = await supabase
+            .from('note_versions')
+            .select('version_number')
+            .eq('note_id', noteId)
+            .order('version_number', { ascending: false })
+            .limit(1)
+            .single();
+
+          const nextVersionNumber = (latestVersion?.version_number || 0) + 1;
+
+          // Save the current version
+          await supabase.from('note_versions').insert({
+            note_id: noteId,
+            title: currentNote.title,
+            content: currentNote.content,
+            version_number: nextVersionNumber,
+          });
+        }
+
+        // Update the note
         const { error } = await supabase
           .from('notes')
           .update({ title: title || null, content: content || null })
@@ -182,7 +215,20 @@ const NoteEditor = ({ noteId, open, onClose, onSave }: NoteEditorProps) => {
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{noteId ? "Edit Note" : "New Note"}</DialogTitle>
+          <div className="flex items-center justify-between">
+            <DialogTitle>{noteId ? "Edit Note" : "New Note"}</DialogTitle>
+            {noteId && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setVersionHistoryOpen(true)}
+                className="gap-2"
+              >
+                <History className="h-4 w-4" />
+                History
+              </Button>
+            )}
+          </div>
         </DialogHeader>
         
         <div className="space-y-4 py-4">
@@ -196,16 +242,64 @@ const NoteEditor = ({ noteId, open, onClose, onSave }: NoteEditorProps) => {
             />
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="content">Content</Label>
-            <Textarea
-              id="content"
-              placeholder="Write your note here..."
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-              rows={6}
-            />
-          </div>
+          <Tabs defaultValue="editor" className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="editor">Rich Text Editor</TabsTrigger>
+              <TabsTrigger value="drawing">Drawing</TabsTrigger>
+            </TabsList>
+            <TabsContent value="editor" className="space-y-2">
+              <Label>Content</Label>
+              <RichTextEditor content={content} onChange={setContent} />
+            </TabsContent>
+            <TabsContent value="drawing" className="space-y-2">
+              <Label>Drawing</Label>
+              <DrawingCanvas
+                onSave={async (dataUrl) => {
+                  if (!noteId) {
+                    toast.error("Please save the note first");
+                    return;
+                  }
+                  
+                  // Convert data URL to blob
+                  const response = await fetch(dataUrl);
+                  const blob = await response.blob();
+                  const file = new File([blob], `drawing-${Date.now()}.png`, { type: 'image/png' });
+                  
+                  // Upload as image
+                  setUploading(true);
+                  try {
+                    const { data: { user } } = await supabase.auth.getUser();
+                    if (!user) throw new Error("Not authenticated");
+
+                    const filePath = `${user.id}/${Date.now()}_drawing.png`;
+                    
+                    const { error: uploadError } = await supabase.storage
+                      .from('note-images')
+                      .upload(filePath, file);
+
+                    if (uploadError) throw uploadError;
+
+                    const { error: dbError } = await supabase
+                      .from('note_media')
+                      .insert({
+                        note_id: noteId,
+                        media_type: 'image',
+                        storage_path: filePath,
+                      });
+
+                    if (dbError) throw dbError;
+
+                    toast.success("Drawing saved!");
+                    loadNote();
+                  } catch (error: any) {
+                    toast.error(error.message || "Failed to save drawing");
+                  } finally {
+                    setUploading(false);
+                  }
+                }}
+              />
+            </TabsContent>
+          </Tabs>
 
           {noteId && (
             <div className="space-y-3">
@@ -316,6 +410,19 @@ const NoteEditor = ({ noteId, open, onClose, onSave }: NoteEditorProps) => {
           </div>
         </div>
       </DialogContent>
+      
+      {noteId && (
+        <VersionHistory
+          noteId={noteId}
+          open={versionHistoryOpen}
+          onClose={() => setVersionHistoryOpen(false)}
+          onRestore={(version) => {
+            setTitle(version.title || "");
+            setContent(version.content || "");
+            toast.success("Version restored");
+          }}
+        />
+      )}
     </Dialog>
   );
 };

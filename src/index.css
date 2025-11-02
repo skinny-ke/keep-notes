@@ -8,43 +8,51 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222 47% 11%;
+    --background: 220 17% 97%;
+    --foreground: 220 30% 12%;
 
     --card: 0 0% 100%;
-    --card-foreground: 222 47% 11%;
+    --card-foreground: 220 30% 12%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 222 47% 11%;
+    --popover-foreground: 220 30% 12%;
 
-    --primary: 262 83% 58%;
+    --primary: 265 89% 65%;
     --primary-foreground: 0 0% 100%;
     
-    --primary-glow: 262 83% 70%;
+    --primary-glow: 275 85% 75%;
 
-    --secondary: 210 40% 96%;
-    --secondary-foreground: 222 47% 11%;
+    --secondary: 195 100% 75%;
+    --secondary-foreground: 220 30% 12%;
 
-    --muted: 210 40% 96%;
-    --muted-foreground: 215 16% 47%;
+    --muted: 220 15% 92%;
+    --muted-foreground: 220 10% 45%;
 
-    --accent: 262 83% 95%;
-    --accent-foreground: 262 83% 58%;
+    --accent: 340 82% 92%;
+    --accent-foreground: 340 75% 55%;
 
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 214 32% 91%;
-    --input: 214 32% 91%;
-    --ring: 262 83% 58%;
+    --border: 220 15% 88%;
+    --input: 220 15% 92%;
+    --ring: 265 89% 65%;
 
-    --radius: 0.75rem;
+    --radius: 1rem;
     
-    --gradient-primary: linear-gradient(135deg, hsl(262 83% 58%), hsl(262 83% 70%));
-    --gradient-card: linear-gradient(180deg, hsl(0 0% 100%), hsl(210 40% 98%));
+    --success: 142 76% 45%;
+    --success-foreground: 0 0% 100%;
     
-    --shadow-card: 0 2px 8px -2px hsl(222 47% 11% / 0.1), 0 4px 16px -4px hsl(222 47% 11% / 0.08);
-    --shadow-card-hover: 0 8px 24px -4px hsl(262 83% 58% / 0.15), 0 4px 16px -4px hsl(222 47% 11% / 0.1);
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 100%;
+    
+    --gradient-primary: linear-gradient(135deg, hsl(265 89% 65%), hsl(275 85% 75%));
+    --gradient-secondary: linear-gradient(135deg, hsl(195 100% 75%), hsl(195 100% 85%));
+    --gradient-accent: linear-gradient(135deg, hsl(340 82% 70%), hsl(340 82% 85%));
+    --gradient-card: linear-gradient(180deg, hsl(0 0% 100%), hsl(220 17% 98%));
+    
+    --shadow-card: 0 2px 12px -2px hsl(265 89% 65% / 0.15), 0 4px 20px -4px hsl(220 30% 12% / 0.1);
+    --shadow-card-hover: 0 12px 32px -4px hsl(265 89% 65% / 0.25), 0 8px 24px -4px hsl(220 30% 12% / 0.15);
     
     --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 
@@ -66,41 +74,49 @@ All colors MUST be HSL.
   }
 
   .dark {
-    --background: 222 47% 11%;
-    --foreground: 210 40% 98%;
+    --background: 220 30% 8%;
+    --foreground: 220 17% 97%;
 
-    --card: 217 33% 17%;
-    --card-foreground: 210 40% 98%;
+    --card: 220 25% 12%;
+    --card-foreground: 220 17% 97%;
 
-    --popover: 222 47% 11%;
-    --popover-foreground: 210 40% 98%;
+    --popover: 220 25% 12%;
+    --popover-foreground: 220 17% 97%;
 
-    --primary: 262 83% 58%;
+    --primary: 265 89% 65%;
     --primary-foreground: 0 0% 100%;
     
-    --primary-glow: 262 83% 70%;
+    --primary-glow: 275 85% 75%;
 
-    --secondary: 217 33% 17%;
-    --secondary-foreground: 210 40% 98%;
+    --secondary: 195 100% 40%;
+    --secondary-foreground: 220 17% 97%;
 
-    --muted: 217 33% 17%;
-    --muted-foreground: 215 20% 65%;
+    --muted: 220 20% 18%;
+    --muted-foreground: 220 10% 65%;
 
-    --accent: 262 83% 25%;
-    --accent-foreground: 262 83% 90%;
+    --accent: 340 75% 30%;
+    --accent-foreground: 340 82% 92%;
 
-    --destructive: 0 63% 31%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive: 0 63% 45%;
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 217 33% 17%;
-    --input: 217 33% 17%;
-    --ring: 262 83% 58%;
+    --border: 220 20% 20%;
+    --input: 220 20% 18%;
+    --ring: 265 89% 65%;
     
-    --gradient-primary: linear-gradient(135deg, hsl(262 83% 58%), hsl(262 83% 70%));
-    --gradient-card: linear-gradient(180deg, hsl(217 33% 17%), hsl(217 33% 15%));
+    --success: 142 76% 45%;
+    --success-foreground: 0 0% 100%;
     
-    --shadow-card: 0 2px 8px -2px hsl(0 0% 0% / 0.3), 0 4px 16px -4px hsl(0 0% 0% / 0.2);
-    --shadow-card-hover: 0 8px 24px -4px hsl(262 83% 58% / 0.3), 0 4px 16px -4px hsl(0 0% 0% / 0.2);
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 100%;
+    
+    --gradient-primary: linear-gradient(135deg, hsl(265 89% 65%), hsl(275 85% 75%));
+    --gradient-secondary: linear-gradient(135deg, hsl(195 100% 40%), hsl(195 100% 50%));
+    --gradient-accent: linear-gradient(135deg, hsl(340 75% 40%), hsl(340 75% 50%));
+    --gradient-card: linear-gradient(180deg, hsl(220 25% 12%), hsl(220 25% 10%));
+    
+    --shadow-card: 0 2px 12px -2px hsl(0 0% 0% / 0.4), 0 4px 20px -4px hsl(0 0% 0% / 0.3);
+    --shadow-card-hover: 0 12px 32px -4px hsl(265 89% 65% / 0.35), 0 8px 24px -4px hsl(0 0% 0% / 0.3);
     
     --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     --sidebar-background: 240 5.9% 10%;
@@ -121,5 +137,74 @@ All colors MUST be HSL.
 
   body {
     @apply bg-background text-foreground;
+  }
+  
+  /* Rich text editor prose styles */
+  .prose {
+    @apply text-foreground;
+  }
+  
+  .prose h1 {
+    @apply text-2xl font-bold mb-4 mt-6;
+  }
+  
+  .prose h2 {
+    @apply text-xl font-bold mb-3 mt-5;
+  }
+  
+  .prose h3 {
+    @apply text-lg font-semibold mb-2 mt-4;
+  }
+  
+  .prose p {
+    @apply mb-4;
+  }
+  
+  .prose ul, .prose ol {
+    @apply mb-4 pl-6;
+  }
+  
+  .prose ul {
+    @apply list-disc;
+  }
+  
+  .prose ol {
+    @apply list-decimal;
+  }
+  
+  .prose li {
+    @apply mb-2;
+  }
+  
+  .prose blockquote {
+    @apply border-l-4 border-primary pl-4 italic my-4;
+  }
+  
+  .prose pre {
+    @apply bg-muted rounded-lg p-4 overflow-x-auto my-4;
+  }
+  
+  .prose code {
+    @apply bg-muted px-1.5 py-0.5 rounded text-sm;
+  }
+  
+  .prose pre code {
+    @apply bg-transparent p-0;
+  }
+  
+  .prose a {
+    @apply text-primary underline hover:text-primary/80;
+  }
+  
+  .prose img {
+    @apply rounded-lg my-4 max-w-full;
+  }
+  
+  .prose strong {
+    @apply font-bold;
+  }
+  
+  .prose em {
+    @apply italic;
   }
 }
