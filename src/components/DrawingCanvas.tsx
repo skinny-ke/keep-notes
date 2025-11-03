@@ -25,8 +25,11 @@ const DrawingCanvas = ({ onSave }: DrawingCanvasProps) => {
       isDrawingMode: true,
     });
 
-    canvas.freeDrawingBrush.color = color;
-    canvas.freeDrawingBrush.width = brushSize;
+    // Initialize the freeDrawingBrush right after canvas creation
+    if (canvas.freeDrawingBrush) {
+      canvas.freeDrawingBrush.color = color;
+      canvas.freeDrawingBrush.width = brushSize;
+    }
 
     setFabricCanvas(canvas);
 
@@ -36,7 +39,7 @@ const DrawingCanvas = ({ onSave }: DrawingCanvasProps) => {
   }, []);
 
   useEffect(() => {
-    if (!fabricCanvas) return;
+    if (!fabricCanvas || !fabricCanvas.freeDrawingBrush) return;
 
     fabricCanvas.freeDrawingBrush.color = isEraser ? "#ffffff" : color;
     fabricCanvas.freeDrawingBrush.width = isEraser ? 20 : brushSize;
