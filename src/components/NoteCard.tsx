@@ -11,9 +11,10 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Trash2, FileText, Image as ImageIcon, Music, Video } from "lucide-react";
+import { Trash2, FileText, Image as ImageIcon, Music, Video, Calendar } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { formatDistanceToNow } from "date-fns";
 
 interface MediaItem {
   id: string;
@@ -136,9 +137,10 @@ const NoteCard = ({ note, media, onDelete, onClick }: NoteCardProps) => {
           </div>
         )}
 
-        <p className="text-xs text-muted-foreground pt-2 border-t border-border/50">
-          {new Date(note.created_at).toLocaleDateString()}
-        </p>
+        <div className="flex items-center gap-1 pt-2 border-t border-border/50 text-xs text-muted-foreground">
+          <Calendar className="h-3 w-3" />
+          <span>{formatDistanceToNow(new Date(note.created_at), { addSuffix: true })}</span>
+        </div>
       </div>
     </Card>
   );

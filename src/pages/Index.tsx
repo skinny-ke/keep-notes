@@ -2,10 +2,13 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Plus, LogOut, StickyNote, Download } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Plus, LogOut, StickyNote, Download, Search } from "lucide-react";
 import NoteCard from "@/components/NoteCard";
 import NoteEditor from "@/components/NoteEditor";
 import ExportDialog from "@/components/ExportDialog";
+import { AnimatedFooter } from "@/components/AnimatedFooter";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { toast } from "sonner";
 
 interface Note {
@@ -25,11 +28,13 @@ interface MediaItem {
 const Index = () => {
   const navigate = useNavigate();
   const [notes, setNotes] = useState<Note[]>([]);
+  const [filteredNotes, setFilteredNotes] = useState<Note[]>([]);
   const [media, setMedia] = useState<MediaItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [editorOpen, setEditorOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
   const [selectedNoteId, setSelectedNoteId] = useState<string | undefined>();
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
@@ -65,6 +70,7 @@ const Index = () => {
       if (mediaError) throw mediaError;
 
       setNotes(notesData || []);
+      setFilteredNotes(notesData || []);
       setMedia(mediaData || []);
     } catch (error: any) {
       toast.error(error.message || "Failed to load notes");
@@ -72,6 +78,20 @@ const Index = () => {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (searchQuery.trim() === "") {
+      setFilteredNotes(notes);
+    } else {
+      const query = searchQuery.toLowerCase();
+      const filtered = notes.filter(
+        (note) =>
+          note.title?.toLowerCase().includes(query) ||
+          note.content?.toLowerCase().includes(query)
+      );
+      setFilteredNotes(filtered);
+    }
+  }, [searchQuery, notes]);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -118,6 +138,7 @@ const Index = () => {
             </div>
           </div>
           <div className="flex gap-2">
+            <ThemeToggle />
             <Button onClick={handleCreateNote} size="lg" className="gap-2">
               <Plus className="h-5 w-5" />
               New Note
@@ -131,6 +152,19 @@ const Index = () => {
             </Button>
           </div>
         </header>
+
+        {notes.length > 0 && (
+          <div className="mb-6 relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+            <Input
+              type="text"
+              placeholder="Search notes by title or content..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10 w-full max-w-md"
+            />
+          </div>
+        )}
 
         {notes.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-center">
@@ -146,9 +180,19 @@ const Index = () => {
               Create Your First Note
             </Button>
           </div>
+        ) : filteredNotes.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-20 text-center">
+            <div className="p-6 rounded-2xl bg-accent/50 mb-6">
+              <Search className="h-16 w-16 text-muted-foreground" />
+            </div>
+            <h2 className="text-2xl font-semibold mb-2">No notes found</h2>
+            <p className="text-muted-foreground mb-6 max-w-md">
+              No notes match your search. Try a different query.
+            </p>
+          </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {notes.map((note) => (
+            {filteredNotes.map((note) => (
               <NoteCard
                 key={note.id}
                 note={note}
@@ -159,6 +203,8 @@ const Index = () => {
             ))}
           </div>
         )}
+        
+        <AnimatedFooter />
       </div>
 
       <NoteEditor
