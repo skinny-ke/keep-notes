@@ -31,6 +31,8 @@ const NoteEditor = ({ noteId, open, onClose, onSave }: NoteEditorProps) => {
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [versionHistoryOpen, setVersionHistoryOpen] = useState(false);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [autoSaveTimeout, setAutoSaveTimeout] = useState<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     if (noteId && open) {
@@ -41,6 +43,36 @@ const NoteEditor = ({ noteId, open, onClose, onSave }: NoteEditorProps) => {
       setMedia([]);
     }
   }, [noteId, open]);
+
+  // Auto-save effect
+  useEffect(() => {
+    if (!open || !hasUnsavedChanges) return;
+
+    // Clear existing timeout
+    if (autoSaveTimeout) {
+      clearTimeout(autoSaveTimeout);
+    }
+
+    // Set new timeout for auto-save (3 seconds after last change)
+    const timeout = setTimeout(() => {
+      handleAutoSave();
+    }, 3000);
+
+    setAutoSaveTimeout(timeout);
+
+    return () => {
+      if (autoSaveTimeout) {
+        clearTimeout(autoSaveTimeout);
+      }
+    };
+  }, [title, content, hasUnsavedChanges]);
+
+  // Track changes
+  useEffect(() => {
+    if (open && (title || content)) {
+      setHasUnsavedChanges(true);
+    }
+  }, [title, content, open]);
 
   const loadNote = async () => {
     if (!noteId) return;
@@ -56,6 +88,7 @@ const NoteEditor = ({ noteId, open, onClose, onSave }: NoteEditorProps) => {
 
       setTitle(noteData.title || "");
       setContent(noteData.content || "");
+      setHasUnsavedChanges(false);
 
       const { data: mediaData, error: mediaError } = await supabase
         .from('note_media')
@@ -66,6 +99,27 @@ const NoteEditor = ({ noteId, open, onClose, onSave }: NoteEditorProps) => {
       setMedia(mediaData || []);
     } catch (error: any) {
       toast.error(error.message || "Failed to load note");
+    }
+  };
+
+  const handleAutoSave = async () => {
+    if (!noteId || loading) return;
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { error } = await supabase
+        .from('notes')
+        .update({ title: title || null, content: content || null })
+        .eq('id', noteId);
+
+      if (error) throw error;
+      
+      setHasUnsavedChanges(false);
+      toast.success("Auto-saved", { duration: 1500 });
+    } catch (error: any) {
+      console.error("Auto-save failed:", error);
     }
   };
 
@@ -112,6 +166,7 @@ const NoteEditor = ({ noteId, open, onClose, onSave }: NoteEditorProps) => {
           .eq('id', noteId);
 
         if (error) throw error;
+        setHasUnsavedChanges(false);
         toast.success("Note updated");
       } else {
         const { data, error } = await supabase
@@ -125,6 +180,7 @@ const NoteEditor = ({ noteId, open, onClose, onSave }: NoteEditorProps) => {
           .single();
 
         if (error) throw error;
+        setHasUnsavedChanges(false);
         toast.success("Note created");
       }
 

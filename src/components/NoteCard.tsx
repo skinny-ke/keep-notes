@@ -118,9 +118,10 @@ const NoteCard = ({ note, media, onDelete, onClick }: NoteCardProps) => {
         </div>
         
         {note.content && (
-          <p className="text-sm text-muted-foreground line-clamp-3">
-            {note.content}
-          </p>
+          <div 
+            className="text-sm text-muted-foreground line-clamp-3 prose prose-sm max-w-none prose-p:m-0 prose-headings:m-0 prose-ul:m-0 prose-ol:m-0"
+            dangerouslySetInnerHTML={{ __html: note.content }}
+          />
         )}
 
         {media.length > 0 && (
