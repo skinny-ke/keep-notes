@@ -1,5 +1,6 @@
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -11,7 +12,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Trash2, FileText, Image as ImageIcon, Music, Video, Calendar } from "lucide-react";
+import { Trash2, FileText, Image as ImageIcon, Music, Video, Calendar, Pin } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
@@ -22,39 +23,41 @@ interface MediaItem {
   storage_path: string;
 }
 
+interface Tag {
+  id: string;
+  name: string;
+  color: string | null;
+}
+
 interface NoteCardProps {
   note: {
     id: string;
     title: string | null;
     content: string | null;
     created_at: string;
+    is_pinned?: boolean;
+    color?: string | null;
   };
   media: MediaItem[];
+  tags?: Tag[];
   onDelete: () => void;
   onClick: () => void;
+  selected?: boolean;
+  onSelect?: (selected: boolean) => void;
 }
 
-const NoteCard = ({ note, media, onDelete, onClick }: NoteCardProps) => {
+const NoteCard = ({ note, media, tags = [], onDelete, onClick, selected, onSelect }: NoteCardProps) => {
   const handleDelete = async () => {
     try {
-      // Delete media files first
-      for (const item of media) {
-        const bucket = item.media_type === 'image' ? 'note-images' 
-          : item.media_type === 'audio' ? 'note-audio' 
-          : 'note-videos';
-        
-        await supabase.storage.from(bucket).remove([item.storage_path]);
-      }
-
-      // Delete note (cascade will handle note_media)
+      // Soft delete - just set deleted_at
       const { error } = await supabase
         .from('notes')
-        .delete()
+        .update({ deleted_at: new Date().toISOString() })
         .eq('id', note.id);
 
       if (error) throw error;
 
-      toast.success("Note deleted");
+      toast.success("Note moved to trash");
       onDelete();
     } catch (error: any) {
       toast.error(error.message || "Failed to delete note");
@@ -76,15 +79,54 @@ const NoteCard = ({ note, media, onDelete, onClick }: NoteCardProps) => {
 
   return (
     <Card 
-      className="group relative overflow-hidden transition-all duration-300 hover:shadow-[var(--shadow-card-hover)] cursor-pointer border-border/50 bg-gradient-to-br from-card to-card/80"
+      className={`group relative overflow-hidden transition-all duration-300 hover:shadow-[var(--shadow-card-hover)] cursor-pointer border-border/50 ${
+        selected ? 'ring-2 ring-primary' : ''
+      }`}
       onClick={onClick}
-      style={{ boxShadow: 'var(--shadow-card)' }}
+      style={{ 
+        boxShadow: 'var(--shadow-card)',
+        backgroundColor: note.color || undefined,
+        borderLeftWidth: note.color ? '4px' : undefined,
+        borderLeftColor: note.color || undefined
+      }}
     >
       <div className="p-4 space-y-3">
+        {onSelect && (
+          <input
+            type="checkbox"
+            checked={selected}
+            onChange={(e) => {
+              e.stopPropagation();
+              onSelect(e.target.checked);
+            }}
+            className="absolute top-3 left-3 h-4 w-4 rounded border-gray-300"
+          />
+        )}
+        
         <div className="flex items-start justify-between gap-2">
-          <h3 className="font-semibold text-lg line-clamp-2 flex-1">
-            {note.title || "Untitled Note"}
-          </h3>
+          <div className="flex-1">
+            <div className="flex items-start gap-2">
+              {note.is_pinned && (
+                <Pin className="h-4 w-4 text-primary flex-shrink-0 mt-1" fill="currentColor" />
+              )}
+              <h3 className="font-semibold text-lg line-clamp-2 flex-1">
+                {note.title || "Untitled Note"}
+              </h3>
+            </div>
+            {tags && tags.length > 0 && (
+              <div className="flex flex-wrap gap-1 mt-2">
+                {tags.map((tag) => (
+                  <Badge
+                    key={tag.id}
+                    style={{ backgroundColor: tag.color || undefined }}
+                    className="text-xs"
+                  >
+                    {tag.name}
+                  </Badge>
+                ))}
+              </div>
+            )}
+          </div>
           <AlertDialog>
             <AlertDialogTrigger asChild>
               <Button
@@ -98,10 +140,9 @@ const NoteCard = ({ note, media, onDelete, onClick }: NoteCardProps) => {
             </AlertDialogTrigger>
             <AlertDialogContent onClick={(e) => e.stopPropagation()}>
               <AlertDialogHeader>
-                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                <AlertDialogTitle>Move to trash?</AlertDialogTitle>
                 <AlertDialogDescription>
-                  This action cannot be undone. This will permanently delete your note
-                  and all associated media files.
+                  You can restore this note from the trash later.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
@@ -110,7 +151,7 @@ const NoteCard = ({ note, media, onDelete, onClick }: NoteCardProps) => {
                   onClick={handleDelete}
                   className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                 >
-                  Delete
+                  Move to Trash
                 </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>

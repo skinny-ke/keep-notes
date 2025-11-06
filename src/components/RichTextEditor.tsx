@@ -4,12 +4,14 @@ import Underline from '@tiptap/extension-underline';
 import Image from '@tiptap/extension-image';
 import Link from '@tiptap/extension-link';
 import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight';
+import TaskList from '@tiptap/extension-task-list';
+import TaskItem from '@tiptap/extension-task-item';
 import { common, createLowlight } from 'lowlight';
 import { Button } from '@/components/ui/button';
 import { 
   Bold, Italic, Underline as UnderlineIcon, Strikethrough, 
   Code, Heading1, Heading2, List, ListOrdered, Quote, 
-  Undo, Redo, Link as LinkIcon, Image as ImageIcon
+  Undo, Redo, Link as LinkIcon, Image as ImageIcon, CheckSquare
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -33,6 +35,10 @@ const RichTextEditor = ({ content, onChange }: RichTextEditorProps) => {
       }),
       CodeBlockLowlight.configure({
         lowlight,
+      }),
+      TaskList,
+      TaskItem.configure({
+        nested: true,
       }),
     ],
     content,
@@ -132,6 +138,14 @@ const RichTextEditor = ({ content, onChange }: RichTextEditorProps) => {
           onClick={() => editor.chain().focus().toggleOrderedList().run()}
         >
           <ListOrdered className="h-4 w-4" />
+        </Button>
+        <Button
+          type="button"
+          size="sm"
+          variant={editor.isActive('taskList') ? 'secondary' : 'ghost'}
+          onClick={() => editor.chain().focus().toggleTaskList().run()}
+        >
+          <CheckSquare className="h-4 w-4" />
         </Button>
         <Button
           type="button"

@@ -46,6 +46,39 @@ export type Database = {
           },
         ]
       }
+      note_tags: {
+        Row: {
+          created_at: string
+          note_id: string
+          tag_id: string
+        }
+        Insert: {
+          created_at?: string
+          note_id: string
+          tag_id: string
+        }
+        Update: {
+          created_at?: string
+          note_id?: string
+          tag_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "note_tags_note_id_fkey"
+            columns: ["note_id"]
+            isOneToOne: false
+            referencedRelation: "notes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "note_tags_tag_id_fkey"
+            columns: ["tag_id"]
+            isOneToOne: false
+            referencedRelation: "tags"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       note_versions: {
         Row: {
           content: string | null
@@ -83,27 +116,60 @@ export type Database = {
       }
       notes: {
         Row: {
+          color: string | null
           content: string | null
           created_at: string
+          deleted_at: string | null
           id: string
+          is_pinned: boolean | null
           title: string | null
           updated_at: string
           user_id: string
         }
         Insert: {
+          color?: string | null
           content?: string | null
           created_at?: string
+          deleted_at?: string | null
           id?: string
+          is_pinned?: boolean | null
           title?: string | null
           updated_at?: string
           user_id: string
         }
         Update: {
+          color?: string | null
           content?: string | null
           created_at?: string
+          deleted_at?: string | null
           id?: string
+          is_pinned?: boolean | null
           title?: string | null
           updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      tags: {
+        Row: {
+          color: string | null
+          created_at: string
+          id: string
+          name: string
+          user_id: string
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string
+          id?: string
+          name: string
+          user_id: string
+        }
+        Update: {
+          color?: string | null
+          created_at?: string
+          id?: string
+          name?: string
           user_id?: string
         }
         Relationships: []

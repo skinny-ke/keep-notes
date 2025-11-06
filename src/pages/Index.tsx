@@ -1,14 +1,15 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, LogOut, StickyNote, Download, Search } from "lucide-react";
+import { Plus, LogOut, StickyNote, Download, Search, Trash2, User } from "lucide-react";
 import NoteCard from "@/components/NoteCard";
 import NoteEditor from "@/components/NoteEditor";
 import ExportDialog from "@/components/ExportDialog";
 import { AnimatedFooter } from "@/components/AnimatedFooter";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { toast } from "sonner";
 
 interface Note {
@@ -16,6 +17,8 @@ interface Note {
   title: string | null;
   content: string | null;
   created_at: string;
+  is_pinned: boolean;
+  color: string | null;
 }
 
 interface MediaItem {
@@ -25,16 +28,35 @@ interface MediaItem {
   storage_path: string;
 }
 
+interface Tag {
+  id: string;
+  name: string;
+  color: string | null;
+}
+
 const Index = () => {
   const navigate = useNavigate();
   const [notes, setNotes] = useState<Note[]>([]);
   const [filteredNotes, setFilteredNotes] = useState<Note[]>([]);
   const [media, setMedia] = useState<MediaItem[]>([]);
+  const [noteTags, setNoteTags] = useState<Record<string, Tag[]>>({});
   const [loading, setLoading] = useState(true);
   const [editorOpen, setEditorOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
   const [selectedNoteId, setSelectedNoteId] = useState<string | undefined>();
   const [searchQuery, setSearchQuery] = useState("");
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  const handleCreateNote = () => {
+    setSelectedNoteId(undefined);
+    setEditorOpen(true);
+  };
+
+  useKeyboardShortcuts({
+    onNewNote: handleCreateNote,
+    onSearch: () => searchInputRef.current?.focus(),
+    onExport: () => setExportOpen(true),
+  });
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
@@ -59,6 +81,8 @@ const Index = () => {
       const { data: notesData, error: notesError } = await supabase
         .from('notes')
         .select('*')
+        .is('deleted_at', null)
+        .order('is_pinned', { ascending: false })
         .order('created_at', { ascending: false });
 
       if (notesError) throw notesError;
@@ -68,10 +92,22 @@ const Index = () => {
         .select('*');
 
       if (mediaError) throw mediaError;
+      setMedia(mediaData || []);
+
+      // Load tags
+      const { data: tagData } = await supabase
+        .from('note_tags')
+        .select('note_id, tag_id, tags(id, name, color)');
+
+      const tagsMap: Record<string, Tag[]> = {};
+      tagData?.forEach((item: any) => {
+        if (!tagsMap[item.note_id]) tagsMap[item.note_id] = [];
+        if (item.tags) tagsMap[item.note_id].push(item.tags);
+      });
+      setNoteTags(tagsMap);
 
       setNotes(notesData || []);
       setFilteredNotes(notesData || []);
-      setMedia(mediaData || []);
     } catch (error: any) {
       toast.error(error.message || "Failed to load notes");
     } finally {
@@ -96,11 +132,6 @@ const Index = () => {
   const handleLogout = async () => {
     await supabase.auth.signOut();
     navigate("/auth");
-  };
-
-  const handleCreateNote = () => {
-    setSelectedNoteId(undefined);
-    setEditorOpen(true);
   };
 
   const handleEditNote = (noteId: string) => {
@@ -138,6 +169,12 @@ const Index = () => {
             </div>
           </div>
           <div className="flex gap-2">
+            <Button variant="outline" size="icon" onClick={() => navigate('/profile')}>
+              <User className="h-4 w-4" />
+            </Button>
+            <Button variant="outline" size="icon" onClick={() => navigate('/trash')}>
+              <Trash2 className="h-4 w-4" />
+            </Button>
             <ThemeToggle />
             <Button onClick={handleCreateNote} size="lg" className="gap-2">
               <Plus className="h-5 w-5" />
@@ -157,8 +194,9 @@ const Index = () => {
           <div className="mb-6 relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
             <Input
+              ref={searchInputRef}
               type="text"
-              placeholder="Search notes by title or content..."
+              placeholder="Search notes... (Ctrl+K)"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-10 w-full max-w-md"
@@ -195,11 +233,12 @@ const Index = () => {
             {filteredNotes.map((note) => (
               <NoteCard
                 key={note.id}
-                note={note}
-                media={getNoteMedia(note.id)}
-                onDelete={loadNotes}
-                onClick={() => handleEditNote(note.id)}
-              />
+              note={note}
+              media={getNoteMedia(note.id)}
+              tags={noteTags[note.id]}
+              onDelete={loadNotes}
+              onClick={() => handleEditNote(note.id)}
+            />
             ))}
           </div>
         )}

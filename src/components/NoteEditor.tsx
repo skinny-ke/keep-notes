@@ -6,15 +6,22 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Image as ImageIcon, Music, Video, X, Loader2, History } from "lucide-react";
+import { Image as ImageIcon, Music, Video, X, Loader2, History, Pin, Palette } from "lucide-react";
 import RichTextEditor from "./RichTextEditor";
 import DrawingCanvas from "./DrawingCanvas";
 import VersionHistory from "./VersionHistory";
+import TagManager from "./TagManager";
 
 interface MediaItem {
   id: string;
   media_type: string;
   storage_path: string;
+}
+
+interface Tag {
+  id: string;
+  name: string;
+  color: string | null;
 }
 
 interface NoteEditorProps {
@@ -24,10 +31,20 @@ interface NoteEditorProps {
   onSave: () => void;
 }
 
+const NOTE_COLORS = [
+  null, // Default
+  "#fef3c7", "#fecaca", "#fed7aa", "#fde68a",
+  "#d9f99d", "#bbf7d0", "#a5f3fc", "#bfdbfe",
+  "#ddd6fe", "#f5d0fe", "#fecdd3", "#e5e7eb"
+];
+
 const NoteEditor = ({ noteId, open, onClose, onSave }: NoteEditorProps) => {
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [media, setMedia] = useState<MediaItem[]>([]);
+  const [tags, setTags] = useState<Tag[]>([]);
+  const [isPinned, setIsPinned] = useState(false);
+  const [color, setColor] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [versionHistoryOpen, setVersionHistoryOpen] = useState(false);
@@ -41,6 +58,9 @@ const NoteEditor = ({ noteId, open, onClose, onSave }: NoteEditorProps) => {
       setTitle("");
       setContent("");
       setMedia([]);
+      setTags([]);
+      setIsPinned(false);
+      setColor(null);
     }
   }, [noteId, open]);
 
@@ -88,8 +108,11 @@ const NoteEditor = ({ noteId, open, onClose, onSave }: NoteEditorProps) => {
 
       setTitle(noteData.title || "");
       setContent(noteData.content || "");
+      setIsPinned(noteData.is_pinned || false);
+      setColor(noteData.color || null);
       setHasUnsavedChanges(false);
 
+      // Load media
       const { data: mediaData, error: mediaError } = await supabase
         .from('note_media')
         .select('*')
@@ -97,6 +120,15 @@ const NoteEditor = ({ noteId, open, onClose, onSave }: NoteEditorProps) => {
 
       if (mediaError) throw mediaError;
       setMedia(mediaData || []);
+
+      // Load tags
+      const { data: tagData, error: tagError } = await supabase
+        .from('note_tags')
+        .select('tag_id, tags(id, name, color)')
+        .eq('note_id', noteId);
+
+      if (tagError) throw tagError;
+      setTags(tagData?.map((t: any) => t.tags).filter(Boolean) || []);
     } catch (error: any) {
       toast.error(error.message || "Failed to load note");
     }
@@ -111,7 +143,7 @@ const NoteEditor = ({ noteId, open, onClose, onSave }: NoteEditorProps) => {
 
       const { error } = await supabase
         .from('notes')
-        .update({ title: title || null, content: content || null })
+        .update({ title: title || null, content: content || null, is_pinned: isPinned, color })
         .eq('id', noteId);
 
       if (error) throw error;
@@ -162,7 +194,7 @@ const NoteEditor = ({ noteId, open, onClose, onSave }: NoteEditorProps) => {
         // Update the note
         const { error } = await supabase
           .from('notes')
-          .update({ title: title || null, content: content || null })
+          .update({ title: title || null, content: content || null, is_pinned: isPinned, color })
           .eq('id', noteId);
 
         if (error) throw error;
@@ -174,7 +206,9 @@ const NoteEditor = ({ noteId, open, onClose, onSave }: NoteEditorProps) => {
           .insert({ 
             title: title || null, 
             content: content || null,
-            user_id: user.id 
+            user_id: user.id,
+            is_pinned: isPinned,
+            color
           })
           .select()
           .single();
