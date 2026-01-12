@@ -1,1 +1,7 @@
 project_id = "pzozencpdfufzwjirnib"
+
+[functions.get-shared-note]
+verify_jwt = false
+
+[functions.send-password-reset]
+verify_jwt = false
