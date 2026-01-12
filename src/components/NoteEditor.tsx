@@ -4,13 +4,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Image as ImageIcon, Music, Video, X, Loader2, History, Pin, Palette } from "lucide-react";
+import { Image as ImageIcon, Music, Video, X, Loader2, History, Pin, PinOff, Palette, Share2 } from "lucide-react";
 import RichTextEditor from "./RichTextEditor";
 import DrawingCanvas from "./DrawingCanvas";
 import VersionHistory from "./VersionHistory";
 import TagManager from "./TagManager";
+import ShareNoteDialog from "./ShareNoteDialog";
 
 interface MediaItem {
   id: string;
@@ -48,6 +50,7 @@ const NoteEditor = ({ noteId, open, onClose, onSave }: NoteEditorProps) => {
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [versionHistoryOpen, setVersionHistoryOpen] = useState(false);
+  const [shareDialogOpen, setShareDialogOpen] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [autoSaveTimeout, setAutoSaveTimeout] = useState<NodeJS.Timeout | null>(null);
 
@@ -303,21 +306,82 @@ const NoteEditor = ({ noteId, open, onClose, onSave }: NoteEditorProps) => {
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" style={{ backgroundColor: color || undefined }}>
         <DialogHeader>
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-2 flex-wrap">
             <DialogTitle>{noteId ? "Edit Note" : "New Note"}</DialogTitle>
-            {noteId && (
+            <div className="flex items-center gap-1 flex-wrap">
+              {/* Pin Button */}
               <Button
-                variant="outline"
+                variant={isPinned ? "default" : "outline"}
                 size="sm"
-                onClick={() => setVersionHistoryOpen(true)}
-                className="gap-2"
+                onClick={() => setIsPinned(!isPinned)}
+                className="gap-1"
               >
-                <History className="h-4 w-4" />
-                History
+                {isPinned ? <PinOff className="h-4 w-4" /> : <Pin className="h-4 w-4" />}
+                {isPinned ? "Unpin" : "Pin"}
               </Button>
-            )}
+
+              {/* Color Picker */}
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" size="sm" className="gap-1">
+                    <Palette className="h-4 w-4" />
+                    Color
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-3">
+                  <div className="grid grid-cols-4 gap-2">
+                    {NOTE_COLORS.map((c, i) => (
+                      <button
+                        key={i}
+                        className="w-8 h-8 rounded-full border-2 transition-transform hover:scale-110"
+                        style={{
+                          backgroundColor: c || 'transparent',
+                          borderColor: color === c ? 'hsl(var(--primary))' : 'hsl(var(--border))',
+                        }}
+                        onClick={() => setColor(c)}
+                      />
+                    ))}
+                  </div>
+                </PopoverContent>
+              </Popover>
+
+              {/* Tags (only for existing notes) */}
+              {noteId && (
+                <TagManager
+                  noteId={noteId}
+                  selectedTags={tags}
+                  onTagsChange={loadNote}
+                />
+              )}
+
+              {/* Share Button (only for existing notes) */}
+              {noteId && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShareDialogOpen(true)}
+                  className="gap-1"
+                >
+                  <Share2 className="h-4 w-4" />
+                  Share
+                </Button>
+              )}
+
+              {/* History Button */}
+              {noteId && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setVersionHistoryOpen(true)}
+                  className="gap-1"
+                >
+                  <History className="h-4 w-4" />
+                  History
+                </Button>
+              )}
+            </div>
           </div>
         </DialogHeader>
         
@@ -497,7 +561,6 @@ const NoteEditor = ({ noteId, open, onClose, onSave }: NoteEditorProps) => {
             <Button onClick={handleSave} disabled={loading}>
               {loading ? "Saving..." : "Save Note"}
             </Button>
-          </div>
         </div>
       </DialogContent>
       
@@ -511,6 +574,15 @@ const NoteEditor = ({ noteId, open, onClose, onSave }: NoteEditorProps) => {
             setContent(version.content || "");
             toast.success("Version restored");
           }}
+        />
+      )}
+
+      {noteId && (
+        <ShareNoteDialog
+          noteId={noteId}
+          noteTitle={title}
+          open={shareDialogOpen}
+          onClose={() => setShareDialogOpen(false)}
         />
       )}
     </Dialog>
