@@ -1,7 +1,6 @@
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Download, FileJson, FileText } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { FileJson, FileText, FileCode } from "lucide-react";
 import { toast } from "sonner";
 
 interface Note {
@@ -9,6 +8,8 @@ interface Note {
   title: string | null;
   content: string | null;
   created_at: string;
+  is_pinned?: boolean;
+  color?: string | null;
 }
 
 interface MediaItem {
@@ -25,7 +26,48 @@ interface ExportDialogProps {
   media: MediaItem[];
 }
 
+const stripHtml = (html: string): string => {
+  const doc = new DOMParser().parseFromString(html, 'text/html');
+  return doc.body.textContent || '';
+};
+
+const htmlToMarkdown = (html: string): string => {
+  let md = html;
+  // Convert common HTML to markdown
+  md = md.replace(/<h1[^>]*>(.*?)<\/h1>/gi, '# $1\n');
+  md = md.replace(/<h2[^>]*>(.*?)<\/h2>/gi, '## $1\n');
+  md = md.replace(/<h3[^>]*>(.*?)<\/h3>/gi, '### $1\n');
+  md = md.replace(/<strong[^>]*>(.*?)<\/strong>/gi, '**$1**');
+  md = md.replace(/<b[^>]*>(.*?)<\/b>/gi, '**$1**');
+  md = md.replace(/<em[^>]*>(.*?)<\/em>/gi, '*$1*');
+  md = md.replace(/<i[^>]*>(.*?)<\/i>/gi, '*$1*');
+  md = md.replace(/<u[^>]*>(.*?)<\/u>/gi, '_$1_');
+  md = md.replace(/<s[^>]*>(.*?)<\/s>/gi, '~~$1~~');
+  md = md.replace(/<code[^>]*>(.*?)<\/code>/gi, '`$1`');
+  md = md.replace(/<li[^>]*>(.*?)<\/li>/gi, '- $1\n');
+  md = md.replace(/<br\s*\/?>/gi, '\n');
+  md = md.replace(/<p[^>]*>(.*?)<\/p>/gi, '$1\n\n');
+  md = md.replace(/<[^>]+>/g, ''); // Strip remaining tags
+  md = md.replace(/&nbsp;/g, ' ');
+  md = md.replace(/&amp;/g, '&');
+  md = md.replace(/&lt;/g, '<');
+  md = md.replace(/&gt;/g, '>');
+  return md.trim();
+};
+
 const ExportDialog = ({ open, onClose, notes, media }: ExportDialogProps) => {
+  const downloadFile = (content: string, filename: string, type: string) => {
+    const blob = new Blob([content], { type });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
   const exportAsJSON = () => {
     const exportData = {
       exportDate: new Date().toISOString(),
@@ -36,51 +78,74 @@ const ExportDialog = ({ open, onClose, notes, media }: ExportDialogProps) => {
       }))
     };
 
-    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `notesapp-export-${new Date().toISOString().split('T')[0]}.json`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    downloadFile(
+      JSON.stringify(exportData, null, 2),
+      `notes-export-${new Date().toISOString().split('T')[0]}.json`,
+      "application/json"
+    );
     
     toast.success("Notes exported as JSON");
     onClose();
   };
 
   const exportAsText = () => {
-    let text = "NotesApp Export\n";
-    text += `Export Date: ${new Date().toLocaleString()}\n`;
-    text += `Total Notes: ${notes.length}\n\n`;
-    text += "=".repeat(50) + "\n\n";
+    let text = "📝 Notes Export\n";
+    text += `📅 Export Date: ${new Date().toLocaleString()}\n`;
+    text += `📊 Total Notes: ${notes.length}\n\n`;
+    text += "═".repeat(50) + "\n\n";
 
     notes.forEach((note, index) => {
-      text += `Note ${index + 1}\n`;
+      const pinned = note.is_pinned ? "📌 " : "";
+      text += `${pinned}Note ${index + 1}\n`;
       text += `Title: ${note.title || "Untitled"}\n`;
-      text += `Created: ${new Date(note.created_at).toLocaleString()}\n`;
-      text += `Content:\n${note.content || "(no content)"}\n`;
+      text += `Created: ${new Date(note.created_at).toLocaleString()}\n\n`;
+      text += `${stripHtml(note.content || "(no content)")}\n`;
       
       const noteMedia = media.filter(m => m.note_id === note.id);
       if (noteMedia.length > 0) {
-        text += `Media: ${noteMedia.map(m => m.media_type).join(", ")}\n`;
+        text += `\n📎 Attachments: ${noteMedia.map(m => m.media_type).join(", ")}\n`;
       }
       
-      text += "\n" + "-".repeat(50) + "\n\n";
+      text += "\n" + "─".repeat(50) + "\n\n";
     });
 
-    const blob = new Blob([text], { type: "text/plain" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `notesapp-export-${new Date().toISOString().split('T')[0]}.txt`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    downloadFile(
+      text,
+      `notes-export-${new Date().toISOString().split('T')[0]}.txt`,
+      "text/plain"
+    );
     
     toast.success("Notes exported as text");
+    onClose();
+  };
+
+  const exportAsMarkdown = () => {
+    let md = "# 📝 Notes Export\n\n";
+    md += `**Export Date:** ${new Date().toLocaleString()}\n\n`;
+    md += `**Total Notes:** ${notes.length}\n\n`;
+    md += "---\n\n";
+
+    notes.forEach((note, index) => {
+      const pinned = note.is_pinned ? "📌 " : "";
+      md += `## ${pinned}${note.title || "Untitled"}\n\n`;
+      md += `*Created: ${new Date(note.created_at).toLocaleString()}*\n\n`;
+      md += `${htmlToMarkdown(note.content || "_No content_")}\n\n`;
+      
+      const noteMedia = media.filter(m => m.note_id === note.id);
+      if (noteMedia.length > 0) {
+        md += `> 📎 **Attachments:** ${noteMedia.map(m => m.media_type).join(", ")}\n\n`;
+      }
+      
+      md += "---\n\n";
+    });
+
+    downloadFile(
+      md,
+      `notes-export-${new Date().toISOString().split('T')[0]}.md`,
+      "text/markdown"
+    );
+    
+    toast.success("Notes exported as Markdown");
     onClose();
   };
 
@@ -89,41 +154,50 @@ const ExportDialog = ({ open, onClose, notes, media }: ExportDialogProps) => {
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>Export Notes</DialogTitle>
+          <DialogDescription>
+            Download all {notes.length} {notes.length === 1 ? 'note' : 'notes'} in your preferred format.
+          </DialogDescription>
         </DialogHeader>
         
-        <div className="space-y-4 py-4">
-          <p className="text-sm text-muted-foreground">
-            Download all your notes ({notes.length} {notes.length === 1 ? 'note' : 'notes'}) in your preferred format.
-          </p>
+        <div className="space-y-3 py-4">
+          <Button 
+            onClick={exportAsJSON} 
+            className="w-full justify-start gap-3 h-auto py-3"
+            variant="outline"
+          >
+            <FileJson className="h-5 w-5 text-blue-500" />
+            <div className="flex flex-col items-start">
+              <span className="font-medium">Export as JSON</span>
+              <span className="text-xs text-muted-foreground">Complete data with metadata, ideal for backups</span>
+            </div>
+          </Button>
 
-          <div className="space-y-2">
-            <Button 
-              onClick={exportAsJSON} 
-              className="w-full justify-start gap-3"
-              variant="outline"
-            >
-              <FileJson className="h-5 w-5" />
-              <div className="flex flex-col items-start">
-                <span className="font-medium">Export as JSON</span>
-                <span className="text-xs text-muted-foreground">Complete data with metadata</span>
-              </div>
-            </Button>
+          <Button 
+            onClick={exportAsMarkdown} 
+            className="w-full justify-start gap-3 h-auto py-3"
+            variant="outline"
+          >
+            <FileCode className="h-5 w-5 text-purple-500" />
+            <div className="flex flex-col items-start">
+              <span className="font-medium">Export as Markdown</span>
+              <span className="text-xs text-muted-foreground">Formatted text, great for other apps</span>
+            </div>
+          </Button>
 
-            <Button 
-              onClick={exportAsText} 
-              className="w-full justify-start gap-3"
-              variant="outline"
-            >
-              <FileText className="h-5 w-5" />
-              <div className="flex flex-col items-start">
-                <span className="font-medium">Export as Text</span>
-                <span className="text-xs text-muted-foreground">Human-readable format</span>
-              </div>
-            </Button>
-          </div>
+          <Button 
+            onClick={exportAsText} 
+            className="w-full justify-start gap-3 h-auto py-3"
+            variant="outline"
+          >
+            <FileText className="h-5 w-5 text-green-500" />
+            <div className="flex flex-col items-start">
+              <span className="font-medium">Export as Plain Text</span>
+              <span className="text-xs text-muted-foreground">Simple readable format, works everywhere</span>
+            </div>
+          </Button>
 
-          <p className="text-xs text-muted-foreground pt-2">
-            Note: Media files are not included in exports. Only references to media are saved.
+          <p className="text-xs text-muted-foreground pt-2 text-center">
+            Media files are referenced but not included in exports.
           </p>
         </div>
       </DialogContent>
