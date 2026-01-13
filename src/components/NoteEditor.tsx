@@ -561,6 +561,7 @@ const NoteEditor = ({ noteId, open, onClose, onSave }: NoteEditorProps) => {
             <Button onClick={handleSave} disabled={loading}>
               {loading ? "Saving..." : "Save Note"}
             </Button>
+          </div>
         </div>
       </DialogContent>
       
